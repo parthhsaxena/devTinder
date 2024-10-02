@@ -5,6 +5,7 @@ const User = require("./models/user");
 
 app.use(express.json());
 
+// API for adding a user
 app.post("/signup", async (req, res) => {
   // Creating a new instance of the user model
   const user = new User(req.body);
@@ -14,6 +15,54 @@ app.post("/signup", async (req, res) => {
     res.send("User Added Successfully");
   } catch (err) {
     res.status(400).send("Error Saving the User" + err.message);
+  }
+});
+
+// API to get users with same email id
+app.get("/user", async (req, res) => {
+  const userEmail = req.body.email;
+  try {
+    const users = await User.find({ email: userEmail });
+    if (users.length === 0) {
+      res.status(404).send("User not found");
+    } else {
+      res.send(users);
+    }
+  } catch (error) {
+    res.status(400).send("Something went wrong");
+  }
+});
+
+// API to get all users from database
+app.get("/feed", async (req, res) => {
+  try {
+    const users = await User.find({});
+    res.send(users);
+  } catch (error) {
+    res.status(400).send("Something went wrong");
+  }
+});
+
+// API to delete a user based on ID
+app.delete("/user", async (req, res) => {
+  const userId = req.body.userId;
+  try {
+    const users = await User.findByIdAndDelete(userId);
+    res.send("User deleted successfully");
+  } catch (err) {
+    res.status(400).send("Something went wrong");
+  }
+});
+
+// API to update user data (query on email)
+app.patch("/user", async (req, res) => {
+  const userEmail = req.body.email;
+  const data = req.body;
+  try {
+    const users = await User.findOneAndUpdate({ email: userEmail }, data);
+    res.send("User updated successfully");
+  } catch (err) {
+    res.status(400).send("Something went wrong");
   }
 });
 
