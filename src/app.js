@@ -2,19 +2,33 @@ const express = require("express");
 const connectDB = require("./config/database");
 const app = express();
 const User = require("./models/user");
+const bcrypt = require("bcrypt");
+const { validateSignupData } = require("./utils/validation");
 
 app.use(express.json());
 
 // API for adding a user
 app.post("/signup", async (req, res) => {
-  // Creating a new instance of the user model
-  const user = new User(req.body);
   try {
+    // Validation of the data
+    validateSignupData(req);
+    const { firstName, lastName, email, password } = req.body;
+    // Password Encryption
+    const passwordHash = await bcrypt.hash(password, 10);
+    console.log(passwordHash);
+    // Creating a new instance of the user model
+    const user = new User({
+      firstName,
+      lastName,
+      email,
+      password: passwordHash,
+    });
+
     // user.save will save the user in the database
     await user.save();
     res.send("User Added Successfully");
   } catch (err) {
-    res.status(400).send("Error Saving the User" + err.message);
+    res.status(400).send("ERROR: " + err.message);
   }
 });
 
@@ -58,11 +72,31 @@ app.delete("/user", async (req, res) => {
 app.patch("/user", async (req, res) => {
   const userEmail = req.body.email;
   const data = req.body;
+
   try {
-    const users = await User.findOneAndUpdate({ email: userEmail }, data);
+    const ALLOWED_UPDATES = [
+      "email",
+      "userId",
+      "age",
+      "photoUrl",
+      "gender",
+      "skills",
+      "about",
+    ];
+    const isUpdateAllowed = Object.keys(data).every((k) =>
+      ALLOWED_UPDATES.includes(k)
+    );
+    if (!isUpdateAllowed) {
+      throw new Error("Cannot be updated");
+    }
+    const user = await User.findOneAndUpdate({ email: userEmail }, data, {
+      returnDocument: "after",
+      runValidators: true,
+    });
+    console.log(user);
     res.send("User updated successfully");
   } catch (err) {
-    res.status(400).send("Something went wrong");
+    res.status(400).send("UPDATE FAILED: " + err.message);
   }
 });
 
