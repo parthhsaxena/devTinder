@@ -32,6 +32,25 @@ app.post("/signup", async (req, res) => {
   }
 });
 
+// API for login
+app.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email: email });
+    if (!user) {
+      throw new Error("Invalid Credentials!");
+    }
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (isPasswordValid) {
+      res.send("Login Successful!");
+    } else {
+      throw new Error("Invalid Credentials!");
+    }
+  } catch (err) {
+    res.status(400).send("UPDATE FAILED: " + err.message);
+  }
+});
+
 // API to get users with same email id
 app.get("/user", async (req, res) => {
   const userEmail = req.body.email;
