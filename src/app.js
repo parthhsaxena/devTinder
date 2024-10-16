@@ -3,9 +3,13 @@ const connectDB = require("./config/database");
 const app = express();
 const User = require("./models/user");
 const bcrypt = require("bcrypt");
+const cookieParser = require("cookie-parser");
+const jwt = require("jsonwebtoken");
 const { validateSignupData } = require("./utils/validation");
+const { userAuth } = require("./middlewares/auth");
 
 app.use(express.json());
+app.use(cookieParser());
 
 // API for adding a user
 app.post("/signup", async (req, res) => {
@@ -40,8 +44,13 @@ app.post("/login", async (req, res) => {
     if (!user) {
       throw new Error("Invalid Credentials!");
     }
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await user.validatePassword(password);
     if (isPasswordValid) {
+      // Create a JWT token
+      const token = await user.getJWT();
+
+      // Add the token to cookie and send the response back to user
+      res.cookie("token", token, { expires: new Date(Date.now() + 900000) });
       res.send("Login Successful!");
     } else {
       throw new Error("Invalid Credentials!");
@@ -49,6 +58,22 @@ app.post("/login", async (req, res) => {
   } catch (err) {
     res.status(400).send("UPDATE FAILED: " + err.message);
   }
+});
+
+// API to get profile of user
+app.get("/profile", userAuth, async (req, res) => {
+  try {
+    const user = req.user;
+    res.send(user);
+  } catch (err) {
+    res.status(400).send("UPDATE FAILED: " + err.message);
+  }
+});
+
+// API to send connection request
+app.post("/sendConnectionRequest", userAuth, async (req, res) => {
+  const user = req.user;
+  res.send(user.firstName + " is sending a connection request");
 });
 
 // API to get users with same email id
